@@ -9,8 +9,8 @@ util.inherits(Device,stream);
 // not so elegant way to store all of the devices created by the driver, plus a few variables...
 var deviceList = [];
 var weathDataFeatures = ["conditions"]  // a single api request can combine many forms of data so as to save you # of requests per day, etc. - can be: alerts, almanac, astronomy, conditions, currenthurricane, forecast, forecast10day, geolookup, history, hourly, hourly10day, planner, rawtide, satellite, tide, webcams, yesterday
-var apiKey = "6ed6c7fe07d64fa7"; // api key obtained from http://www.wunderground.com/weather/api/ (documentation: http://www.wunderground.com/weather/api/d/docs)
-var zipCode = "30736"; // zip code of location
+var apiKey = "xxx"; // api key obtained from http://www.wunderground.com/weather/api/ (documentation: http://www.wunderground.com/weather/api/d/docs)
+var zipCode = "10007"; // zip code of location
 var useFahrenheit = true; // set false to use Celsius
 var pauseAfterSetToUpdate = 5000; // in milliseconds
 var updateInterval = 300000; // in milliseconds
