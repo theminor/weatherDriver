@@ -77,13 +77,15 @@ function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 			if (!wData) {
 				app.log.warn('weatherDriver was unable to parse data recieved. No update was made this cycle.');
 			}
+			var useFht = false;
+			if (useFahrenheit==true || useFahrenheit=="true") { useFht = false }; // account for "false" stored as string
 			else {
 				deviceList.forEach(function(dev){
 					app.log.info('Updating weatherDriver Device: ' + dev.name);
 					var parsedResult = undefined;
 					(dev.config.data || []).forEach(function(fn) {
 						try {
-							parsedResult = fn(wData, useFahrenheit);
+							parsedResult = fn(wData, useFht);
 						} catch(e) {
 							parsedResult = undefined;
 						}
