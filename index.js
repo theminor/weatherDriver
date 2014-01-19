@@ -47,7 +47,7 @@ function Device(app, config) {
 	this.config = config;
 	this.readable = true;
 	this.writeable = config.canSet || false;
-	if (this.writeable) { app.log.info('weatherDriver Device ' + config.name + ' is readable and writable' ); } else app.log.info('weatherDriver Device ' + config.name + ' is readable only' );
+	if (this.writeable) { app.log.debug('weatherDriver Device ' + config.name + ' is readable and writable' ); } else app.log.debug('weatherDriver Device ' + config.name + ' is readable only' );
 	this.V = config.vendorId || 0;
 	this.D = config.deviceId;
 	this.G = 'wd' + (config.name).replace(/[^a-zA-Z0-9]/g, '');
@@ -56,11 +56,11 @@ function Device(app, config) {
 };
 
 function updateDevices(app, opts) {	// runs every "updateInterval" seconds
-	app.log.info("Updating weatherDriver Devices...");
+	app.log.debug("Updating weatherDriver Devices...");
 	var getTempCmd = "curl -s http://api.wunderground.com/api/" + apiKey + "/" + weathDataFeatures.join("/") + "/q/" + zipCode + ".json";  // example: http://api.wunderground.com/api/6ed6c7fe07d64fa7/conditions/q/30736.json - See api for documentation - http://api.wunderground.com/api/apiKey/features (can be combined more than one)/settings (leave out to accept defaults)/q/query (the location - can be a zip code, city, etc).format (json or xml)
-	app.log.info("weatherDriver executing command: " + getTempCmd);
+	app.log.debug("weatherDriver executing command: " + getTempCmd);
 	exec(getTempCmd, function(error, stdout, stderr) {
-		app.log.info("Result of weatherDriver command: " + stdout);
+		app.log.debug("Result of weatherDriver command: " + stdout);
 		if (error) {
 			if (error != null) {
 				app.log.warn('weatherDriver : ' + this.name + ' error! - ' + error);
@@ -81,7 +81,7 @@ function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 			}
 			else {
 				deviceList.forEach(function(dev){
-					app.log.info('Updating weatherDriver Device: ' + dev.name);
+					app.log.debug('Updating weatherDriver Device: ' + dev.name);
 					var parsedResult = undefined;
 					(dev.config.data || []).forEach(function(fn) {
 						try {
@@ -89,14 +89,14 @@ function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 						} catch(e) {
 							parsedResult = undefined;
 						}
-						app.log.info(dev.name + ' - parse data: ' + inputString + ' --> ' + parsedResult);
+						app.log.debug(dev.name + ' - parse data: ' + inputString + ' --> ' + parsedResult);
 					});
 					if (parsedResult !== undefined) {
-						app.log.info(dev.name + ' - emmitting data: ' + parsedResult);
+						app.log.debug(dev.name + ' - emmitting data: ' + parsedResult);
 						dev.emit('data', parsedResult);
 					}
 					else {
-						app.log.info(dev.name + ' - did not emmit data!');
+						app.log.debug(dev.name + ' - did not emmit data!');
 					};
 				});
 			};
@@ -107,8 +107,8 @@ function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 Device.prototype.write = function(dataRcvd) {
 	var app = this._app;
 	var opts = this.opts;
-	app.log.info("weatherDriver Device " + this.name + " received data: " + dataRcvd);
-	app.log.info("weatherDriver Device canSet: " + this.config.canSet);
+	app.log.debug("weatherDriver Device " + this.name + " received data: " + dataRcvd);
+	app.log.debug("weatherDriver Device canSet: " + this.config.canSet);
 	if (this.config.canSet) {
 		var stgSubmit = undefined;
 		(this.config.setStg || []).forEach(function(fn) {
@@ -118,28 +118,28 @@ Device.prototype.write = function(dataRcvd) {
 				stgSubmit = undefined;
 			}
 		});
-		app.log.info("weatherDriver string: " + stgSubmit);
+		app.log.debug("weatherDriver string: " + stgSubmit);
 		if (stgSubmit !== undefined) {
-			app.log.info(this.name + " - submitting data to thermostat: " + stgSubmit);
+			app.log.debug(this.name + " - submitting data to thermostat: " + stgSubmit);
 			var rslt = exec(stgSubmit, function (error, stdout, stderr) {
 				stdout.replace(/(\n|\r|\r\n)$/, '');
-				app.log.info(this.name + " - Result: " + stdout);
+				app.log.debug(this.name + " - Result: " + stdout);
 				setTimeout( function() { updateDevices(app, opts) }, pauseAfterSetToUpdate);
 			});
 		}
 		else {
-			app.log.info(this.name + ' - error parsing data!');
+			app.log.debug(this.name + ' - error parsing data!');
 		};		
 	}
 	else {
-		app.log.info("weatherDriver Device " + this.name + " received data, but this type of device can't update");
+		app.log.debug("weatherDriver Device " + this.name + " received data, but this type of device can't update");
 	}
 };
 
 Driver.prototype.config = function(rpc,cb) {
 	var self = this;
 	if (!rpc) {
-		this._app.log.info("weatherDriver main config window called");
+		this._app.log.debug("weatherDriver main config window called");
 		return cb(null, {	// main config window
 			"contents":[
 				{ "type": "paragraph", "text": "The weatherDriver allows you to monitor the weather outside. To use this, you'll need a free api from http://www.wunderground.com/weather/api/ - Enter the settings below to get started, and please make sure you get a confirmation message after hitting 'Submit' below. (You may have to click it a couple of times. If you don't get a confirmation message, the settings did not update!)"},
@@ -155,7 +155,7 @@ Driver.prototype.config = function(rpc,cb) {
 		});
 	};
 	if (rpc.method == "submt") {
-		this._app.log.info("weatherDriver config window submitted. Checking data for errors...");
+		this._app.log.debug("weatherDriver config window submitted. Checking data for errors...");
 		// check for errors
 		if (!(rpc.params.zip_code_text >= 0)) {	// zip_code_text must evaluate to a positive number or 0
 			cb(null, {
@@ -185,7 +185,7 @@ Driver.prototype.config = function(rpc,cb) {
 			return;				
 		}		
 		else {	// looks like the submitted values were valid, so update
-			this._app.log.info("weatherDriver data appears valid. Saving settings...");
+			this._app.log.debug("weatherDriver data appears valid. Saving settings...");
             self.opts.apiKey = rpc.params.api_text;
             self.opts.zipCode = rpc.params.zip_code_text;
 			self.opts.useFahrenheit = rpc.params.use_fahrenheit_select;
@@ -207,7 +207,7 @@ Driver.prototype.config = function(rpc,cb) {
 		};
 	}
 	else {
-		this._app.log.info("weatherDriver - Unknown rpc method was called!");
+		this._app.log.warn("weatherDriver - Unknown rpc method was called!");
 	};
 };
 
