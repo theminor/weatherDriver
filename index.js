@@ -144,7 +144,7 @@ Driver.prototype.config = function(rpc,cb) {
 			"contents":[
 				{ "type": "paragraph", "text": "The weatherDriver allows you to monitor the weather outside. To use this, you'll need a free api from http://www.wunderground.com/weather/api/ - Enter the settings below to get started, and please make sure you get a confirmation message after hitting 'Submit' below. (You may have to click it a couple of times. If you don't get a confirmation message, the settings did not update!)"},
 				{ "type": "input_field_text", "field_name": "api_text", "value": apiKey, "label": "API from wunderground.com", "placeholder": apiKey, "required": true},
-				{ "type": "input_field_text", "field_name": "zip_code_text", "value": zipCode, "label": "Zip Code", "placeholder": zipCode, "required": true},
+				{ "type": "input_field_text", "field_name": "zip_code_text", "value": zipCode, "label": 'Zip Code or Location (i.e. "90210" or "CA/San_Francisco" or "Australia/Sydney" or "autoip")', "placeholder": zipCode, "required": true},
 				{ "type": "input_field_select", "field_name": "use_fahrenheit_select", "label": "Temperature Type to Display", "options": [{ "name": "Fahrenheit", "value": true, "selected": useFahrenheit}, { "name": "Celsius", "value": false, "selected": !useFahrenheit}], "required": true },
 				{ "type": "input_field_text", "field_name": "pause_aft_updt_secs_text", "value": pauseAfterSetToUpdate/1000, "label": "Seconds to Pause After a Command Before Updating", "placeholder": pauseAfterSetToUpdate/1000, "required": true},
 				{ "type": "input_field_text", "field_name": "update_interval_text", "value": updateInterval/1000, "label": "How frequently to update data in seconds. (NOTE each update counts as an api call, so limit this per the number of calls per day your api plan allows)", "placeholder": updateInterval/1000, "required": true},
@@ -157,6 +157,7 @@ Driver.prototype.config = function(rpc,cb) {
 	if (rpc.method == "submt") {
 		this._app.log.debug("weatherDriver config window submitted. Checking data for errors...");
 		// check for errors
+		/*
 		if (!(rpc.params.zip_code_text >= 0)) {	// zip_code_text must evaluate to a positive number or 0
 			cb(null, {
 				"contents": [
@@ -166,7 +167,9 @@ Driver.prototype.config = function(rpc,cb) {
 			});			
 			return;			
 		}
-		else if (!(rpc.params.pause_aft_updt_secs_text >= 0)) {	// pause_aft_updt_secs_text must evaluate to a positive number or 0
+		else if
+		*/
+		if (!(rpc.params.pause_aft_updt_secs_text >= 0)) {	// pause_aft_updt_secs_text must evaluate to a positive number or 0
 			cb(null, {
 				"contents": [
 					{ "type": "paragraph", "text": "The 'pause after update' interval must be a number and can't be negative. Please try again." },
