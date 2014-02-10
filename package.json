@@ -14,5 +14,8 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/theminor/weatherDriver/issues"
+  },
+  "dependencies" : {
+     "restler" : ">=3.1.0"
   }
 }
