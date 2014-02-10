@@ -1,7 +1,7 @@
 var util = require('util');
 var stream = require('stream');
-var exec = require('child_process').exec;
 var commands = require('./commands');
+var rest = require('restler');
 
 util.inherits(Driver,stream);
 util.inherits(Device,stream);
@@ -57,49 +57,35 @@ function Device(app, config) {
 
 function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 	app.log.debug("Updating weatherDriver Devices...");
-	var getTempCmd = "curl -s http://api.wunderground.com/api/" + apiKey + "/" + weathDataFeatures.join("/") + "/q/" + zipCode + ".json";  // example: http://api.wunderground.com/api/6ed6c7fe07d64fa7/conditions/q/30736.json - See api for documentation - http://api.wunderground.com/api/apiKey/features (can be combined more than one)/settings (leave out to accept defaults)/q/query (the location - can be a zip code, city, etc).format (json or xml)
-	app.log.debug("weatherDriver executing command: " + getTempCmd);
-	exec(getTempCmd, function(error, stdout, stderr) {
-		app.log.debug("Result of weatherDriver command: " + stdout);
-		if (error) {
-			if (error != null) {
-				app.log.warn('weatherDriver : ' + this.name + ' error! - ' + error);
-			};
-		}
-		else if (stderr) {
-			if (stderr != null) {
-				app.log.warn('weatherDriver : ' + this.name + ' stderr! - ' + stderr);
-			};
+	var url = "http://api.wunderground.com/api/" + apiKey + "/" + weathDataFeatures.join("/") + "/q/" + zipCode + ".json";  // example: http://api.wunderground.com/api/6ed6c7fe07d64fa7/conditions/q/30736.json - See api for documentation - http://api.wunderground.com/api/apiKey/features (can be combined more than one)/settings (leave out to accept defaults)/q/query (the location - can be a zip code, city, etc).format (json or xml)
+	rest.get(url).on('complete', function(result) {
+		app.log.debug("Result of weatherDriver command: %j", result);
+		if (result instanceof Error) {
+			app.log.warn('weatherDriver : ' + this.name + ' error! - ' + result.message);
+			this.retry(60000); // try again after 60 sec -- **** TODO: make this time period an option
 		}
 		else {
 			var useFht = false;
 			if (useFahrenheit==true || useFahrenheit=="true") { useFht = true }; // account for "false" stored as string
-			var inputString = (stdout + '');
-			var wData = eval ("(" + inputString + ")");
-			if (!wData) {
-				app.log.warn('weatherDriver was unable to parse data recieved. No update was made this cycle.');
-			}
-			else {
-				deviceList.forEach(function(dev){
-					app.log.debug('Updating weatherDriver Device: ' + dev.name);
-					var parsedResult = undefined;
-					(dev.config.data || []).forEach(function(fn) {
-						try {
-							parsedResult = fn(wData, useFht);
-						} catch(e) {
-							parsedResult = undefined;
-						}
-						app.log.debug(dev.name + ' - parse data: ' + inputString + ' --> ' + parsedResult);
-					});
-					if (parsedResult !== undefined) {
-						app.log.debug(dev.name + ' - emmitting data: ' + parsedResult);
-						dev.emit('data', parsedResult);
+			deviceList.forEach(function(dev){
+				app.log.debug('Updating weatherDriver Device: ' + dev.name);
+				var parsedResult = undefined;
+				(dev.config.data || []).forEach(function(fn) {
+					try {
+						parsedResult = fn(result, useFht);
+					} catch(e) {
+						parsedResult = undefined;
 					}
-					else {
-						app.log.debug(dev.name + ' - did not emmit data!');
-					};
+					app.log.debug(dev.name + ' - parse data: ' + parsedResult);
 				});
-			};
+				if (parsedResult !== undefined) {
+					app.log.debug(dev.name + ' - emmitting data: ' + parsedResult);
+					dev.emit('data', parsedResult);
+				}
+				else {
+					app.log.debug(dev.name + ' - did not emmit data!');
+				};
+			});
 		};
 	});
 };
