@@ -57,19 +57,16 @@ function Device(app, config) {
 
 function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 	app.log.debug("Updating weatherDriver Devices...");
-
 	var url = "http://api.wunderground.com/api/" + apiKey + "/" + weathDataFeatures.join("/") + "/q/" + zipCode + ".json";  // example: http://api.wunderground.com/api/6ed6c7fe07d64fa7/conditions/q/30736.json - See api for documentation - http://api.wunderground.com/api/apiKey/features (can be combined more than one)/settings (leave out to accept defaults)/q/query (the location - can be a zip code, city, etc).format (json or xml)
-
 	rest.get(url).on('complete', function(result) {
 		app.log.debug("Result of weatherDriver command: %j", result);
-	  if (result instanceof Error) {
+		if (result instanceof Error) {
 			app.log.warn('weatherDriver : ' + this.name + ' error! - ' + result.message);
-	    this.retry(60000); // try again after 60 sec
-	  }
-	  else {
+			this.retry(60000); // try again after 60 sec -- **** TODO: make this time period an option
+		}
+		else {
 			var useFht = false;
 			if (useFahrenheit==true || useFahrenheit=="true") { useFht = true }; // account for "false" stored as string
-
 			deviceList.forEach(function(dev){
 				app.log.debug('Updating weatherDriver Device: ' + dev.name);
 				var parsedResult = undefined;
@@ -89,7 +86,6 @@ function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 					app.log.debug(dev.name + ' - did not emmit data!');
 				};
 			});
-
 		};
 	});
 };
