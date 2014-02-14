@@ -1,7 +1,7 @@
 var util = require('util');
 var stream = require('stream');
+var http = require('http');
 var commands = require('./commands');
-var rest = require('restler');
 
 util.inherits(Driver,stream);
 util.inherits(Device,stream);
@@ -57,37 +57,50 @@ function Device(app, config) {
 
 function updateDevices(app, opts) {	// runs every "updateInterval" seconds
 	app.log.debug("Updating weatherDriver Devices...");
-	var url = "http://api.wunderground.com/api/" + apiKey + "/" + weathDataFeatures.join("/") + "/q/" + zipCode + ".json";  // example: http://api.wunderground.com/api/6ed6c7fe07d64fa7/conditions/q/30736.json - See api for documentation - http://api.wunderground.com/api/apiKey/features (can be combined more than one)/settings (leave out to accept defaults)/q/query (the location - can be a zip code, city, etc).format (json or xml)
-	rest.get(url).on('complete', function(result) {
-		app.log.debug("Result of weatherDriver command: %j", result);
-		if (result instanceof Error) {
-			app.log.warn('weatherDriver : ' + this.name + ' error! - ' + result.message);
-			this.retry(60000); // try again after 60 sec -- **** TODO: make this time period an option
-		}
-		else {
+	// var url = "http://api.wunderground.com/api/" + apiKey + "/" + weathDataFeatures.join("/") + "/q/" + zipCode + ".json";  // example: http://api.wunderground.com/api/6ed6c7fe07d64fa7/conditions/q/30736.json - See api for documentation - http://api.wunderground.com/api/apiKey/features (can be combined more than one)/settings (leave out to accept defaults)/q/query (the location - can be a zip code, city, etc).format (json or xml)
+	var result = "";
+	http.get(		// see http://nodejs.org/docs/v0.5.2/api/http.html#http.get
+	{	host: 'api.wunderground.com',
+		port: 80,
+		path: '/api/' + apiKey + '/' + weathDataFeatures.join('/') + '/q/' + zipCode + '.json'
+	},
+	function (res) {
+		res.on('data', function (chunk) {
+			result += chunk;
+		});
+		res.on('end', function () {
 			var useFht = false;
 			if (useFahrenheit==true || useFahrenheit=="true") { useFht = true }; // account for "false" stored as string
-			deviceList.forEach(function(dev){
-				app.log.debug('Updating weatherDriver Device: ' + dev.name);
-				var parsedResult = undefined;
-				(dev.config.data || []).forEach(function(fn) {
-					try {
-						parsedResult = fn(result, useFht);
-					} catch(e) {
-						parsedResult = undefined;
+			var inputString = (result + '');
+			var wData = eval ("(" + inputString + ")");
+			if (!wData) {
+				app.log.warn('weatherDriver was unable to parse data recieved. No update was made this cycle.');
+			}
+			else {
+				deviceList.forEach(function(dev){
+					app.log.debug('Updating weatherDriver Device: ' + dev.name);
+					var parsedResult = undefined;
+					(dev.config.data || []).forEach(function(fn) {
+						try {
+							parsedResult = fn(wData, useFht);
+						} catch(e) {
+							parsedResult = undefined;
+						}
+						app.log.debug(dev.name + ' - parse data: ' + parsedResult);
+					});
+					if (parsedResult !== undefined) {
+						app.log.debug(dev.name + ' - emmitting data: ' + parsedResult);
+						dev.emit('data', parsedResult);
 					}
-					app.log.debug(dev.name + ' - parse data: ' + parsedResult);
+					else {
+						app.log.debug(dev.name + ' - did not emmit data!');
+					};
 				});
-				if (parsedResult !== undefined) {
-					app.log.debug(dev.name + ' - emmitting data: ' + parsedResult);
-					dev.emit('data', parsedResult);
-				}
-				else {
-					app.log.debug(dev.name + ' - did not emmit data!');
-				};
-			});
-		};
-	});
+			};
+		});
+	}).on('error', function(e) {
+		app.log.warn('weatherDriver : ' + this.name + ' error! - ' + e.message);
+	});	
 };
 
 Device.prototype.write = function(dataRcvd) {
@@ -142,19 +155,6 @@ Driver.prototype.config = function(rpc,cb) {
 	};
 	if (rpc.method == "submt") {
 		this._app.log.debug("weatherDriver config window submitted. Checking data for errors...");
-		// check for errors
-		/*
-		if (!(rpc.params.zip_code_text >= 0)) {	// zip_code_text must evaluate to a positive number or 0
-			cb(null, {
-				"contents": [
-					{ "type": "paragraph", "text": "zip code must be a number and can't be negative. Please try again." },
-					{ "type": "close"    , "name": "Close" }
-				]
-			});			
-			return;			
-		}
-		else if
-		*/
 		if (!(rpc.params.pause_aft_updt_secs_text >= 0)) {	// pause_aft_updt_secs_text must evaluate to a positive number or 0
 			cb(null, {
 				"contents": [
@@ -201,3 +201,4 @@ Driver.prototype.config = function(rpc,cb) {
 };
 
 module.exports = Driver;
+
